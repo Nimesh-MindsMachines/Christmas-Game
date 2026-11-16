@@ -14,6 +14,13 @@ export function showLearnCard(overlay: HTMLElement, card: { title: string; text:
           <button class="btn btn-accent btn-block" type="button">${esc(button)} ▶</button>
         </div>
       </div>`);
+    const box = sheet.querySelector('.sheet')!;
+    const colors = ['#ffd34d', '#e0651a', '#2f9e5a', '#c9283a', '#4a7fd6'];
+    for (let i = 0; i < 14; i++) {
+      const a = -Math.PI * (0.1 + (0.8 * i) / 13);
+      const d = 70 + Math.random() * 70;
+      box.appendChild(el(`<i class="spark" style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;--c:${colors[i % colors.length]}"></i>`));
+    }
     overlay.appendChild(sheet);
     const btn = sheet.querySelector('button')!;
     requestAnimationFrame(() => { sheet.classList.add('open'); btn.focus({ preventScroll: true }); });

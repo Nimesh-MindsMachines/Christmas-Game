@@ -99,8 +99,9 @@ export function computeAudit(): Audit {
   for (const e of EMAILS) {
     if (!e.child) continue;
     const recognised = inboxDone && ledger.sorted[e.id] === 'wunsch';
-    if (e.uncertain && !recognised) {
-      children.push({ name: e.child.name, gift: giftName(e.child.gift), ok: false, note: inboxDone ? 'Brief falsch einsortiert' : 'Postfach nicht sortiert' });
+    if (!recognised) {
+      const note = !inboxDone || !ledger.sorted[e.id] ? 'Postfach nicht sortiert' : 'Brief falsch einsortiert';
+      children.push({ name: e.child.name, gift: giftName(e.child.gift), ok: false, note });
       continue;
     }
     const ok = covered.has(e.child.gift);

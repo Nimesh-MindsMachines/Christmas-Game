@@ -5,7 +5,7 @@ import { $ } from './ui/dom';
 import { createDialog, Speaker } from './ui/dialog';
 import { showLearnCard } from './ui/learnCard';
 import { isMuted, setMuted, sfx, unlockAudio } from './ui/sfx';
-import { World } from './world/world';
+import { Pt, World } from './world/world';
 import { intro } from './scenes/intro';
 import { inbox } from './scenes/inbox';
 import { inventory } from './scenes/inventory';
@@ -26,6 +26,8 @@ export interface SceneCtx {
   talk: (who: Speaker, text: string) => Promise<void>;
   /** Level abschließen: Lernkarte zeigen, dann weiter. */
   finish: (learnKey?: keyof typeof LEARN) => Promise<void>;
+  /** Punktestand aktualisieren und den Zuwachs als „+10“ in der Welt zeigen. */
+  award: (at?: string | Pt) => void;
   restart: () => void;
   isActive: () => boolean;
 }
@@ -63,8 +65,8 @@ function renderProgress() {
   const idx = LEVELS.findIndex(l => l.id === id);
   const end = id === 'donate';
   progress.innerHTML = LEVELS.map((l, i) => {
-    const state = i < idx || end ? 'done' : i === idx ? 'now' : '';
-    return `<li class="${state}" title="${l.label}"><span class="sr-only">${l.label}${state === 'done' ? ' (erledigt)' : state === 'now' ? ' (aktuell)' : ''}</span></li>`;
+    const state = i < idx || end ? `done${i === idx - 1 ? ' just' : ''}` : i === idx ? 'now' : '';
+    return `<li class="${state}" title="${l.label}"><span class="sr-only">${l.label}${state.startsWith('done') ? ' (erledigt)' : state === 'now' ? ' (aktuell)' : ''}</span></li>`;
   }).join('');
 }
 
@@ -97,7 +99,7 @@ function go(index: number) {
   sceneRoot.scrollTop = 0;
   sceneRoot.className = `scene-${scene.id}`;
   world.clearBubbles();
-  world.ui.querySelectorAll('.scoreboard, .drop-zone, .end-banner, .title-screen').forEach(n => n.remove());
+  world.ui.querySelectorAll('.scoreboard, .drop-zone, .end-banner, .title-screen, .floater').forEach(n => n.remove());
   world.prepare(scene.id);
   const ctx: SceneCtx = {
     root: sceneRoot,
@@ -105,6 +107,12 @@ function go(index: number) {
     world,
     talk,
     isActive: () => my === token,
+    award: (at = 'santa') => {
+      if (my !== token) return;
+      const total = computeAudit().total;
+      if (total > shownScore) world.float(at, `+${total - shownScore}`);
+      setScore(total);
+    },
     finish: async learnKey => {
       if (my !== token) return;
       if (scene.title) setScore(computeAudit().total);

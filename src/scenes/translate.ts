@@ -8,20 +8,27 @@ import { icon } from '../world/pixels';
 
 export async function translate(ctx: SceneCtx) {
   const { world } = ctx;
+  void world.shot('village');
   const t = createThread(ctx.root, {
     eyebrow: 'Übersetzungs-Erweiterung',
     title: 'Post aus aller Welt',
     intro: 'Ein neuer Junge ist in die Stadt gezogen. Seine E-Mail kann Santa nicht lesen …',
   });
 
+  // Mateo kommt, tippt seine E-Mail – erst wenn sie ankommt, erscheint sie auf dem Handy
   const mateo = world.addKid('mateo', -14);
-  world.walk('mateo', 40, 24).then(() => {
-    if (!ctx.isActive()) return;
-    mateo.pose = 'type';
-    world.say('mateo', '¡Hola, Papá Noel! ¿Me traes un telescopio?', 3400, 'say-es');
-    setTimeout(() => { if (ctx.isActive()) void world.sendEmail({ x: mateo.x + 5, y: mateo.base - 12 }); }, 900);
-    setTimeout(() => { if (ctx.isActive()) { mateo.pose = 'stand'; world.say('santa', '??? Ich verstehe kein Wort!', 2600); } }, 2000);
-  });
+  t.dock.innerHTML = '<p class="muted" style="text-align:center;font-size:14.5px;font-weight:600">Warte auf neue E-Mails <span class="dots" style="margin-left:4px"><i></i><i></i><i></i></span></p>';
+  await world.walk('mateo', 40, 24);
+  if (!ctx.isActive()) return;
+  mateo.pose = 'type';
+  world.say('mateo', '¡Hola, Papá Noel! ¿Me traes un telescopio?', 3600, 'say-es');
+  await wait(900);
+  if (!ctx.isActive()) return;
+  await world.sendEmail({ x: mateo.x + 5, y: mateo.base - 12 });
+  if (!ctx.isActive()) return;
+  mateo.pose = 'stand';
+  world.emote('santa', '?', 1800);
+  world.say('santa', 'Ich verstehe kein Wort!', 2600);
 
   const browser = el(`
     <div class="browser">
@@ -37,7 +44,7 @@ export async function translate(ctx: SceneCtx) {
       </div>
     </div>`);
   t.list.appendChild(browser);
-  t.dock.innerHTML = '<p class="muted" style="text-align:center;font-size:14px">👆 Tippe oben rechts auf das OneMachine-Symbol</p>';
+  t.dock.innerHTML = '<p class="muted" style="text-align:center;font-size:14.5px;font-weight:600">👆 Tippe oben rechts auf das OneMachine-Symbol</p>';
 
   const ext = browser.querySelector<HTMLButtonElement>('.ext-btn')!;
   const text = browser.querySelector<HTMLElement>('.letter-text')!;
@@ -52,7 +59,7 @@ export async function translate(ctx: SceneCtx) {
   const pop = el(`
     <div class="ext-pop">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">${OM_AVATAR}<b>OneMachine</b></div>
-      <p style="font-size:14px;color:var(--ink-2)">Sprache erkannt: <b>${esc(MATEO.languageLabel)}</b></p>
+      <p style="font-size:14.5px;color:var(--ink-2)">Sprache erkannt: <b>${esc(MATEO.languageLabel)}</b></p>
       <button class="btn btn-accent btn-block btn-sm" type="button" style="margin-top:12px">Auf Deutsch übersetzen</button>
     </div>`);
   browser.appendChild(pop);
@@ -64,13 +71,18 @@ export async function translate(ctx: SceneCtx) {
   sfx.power();
   pop.remove();
   text.classList.add('fade');
+  world.ring(world.phonePt(), '#ffd34d', 24);
   world.sparkle(world.phonePt(), ['#e0651a', '#ffd34d', '#ffffff'], 16);
-  await wait(320);
+  await wait(340);
   text.textContent = MATEO.translated;
   text.lang = 'de';
   text.classList.remove('fade');
   ledger.translated = true;
   world.pile = 0;
+  // In der Welt spricht Mateo jetzt „auf Deutsch“
+  world.say('mateo', 'Bringst du mir ein Teleskop?', 2800, 'say-om');
+  world.hopKid('mateo');
+  ctx.award('mateo');
 
   const row = browser.querySelector('.lang-row')!;
   row.innerHTML = `
@@ -85,16 +97,16 @@ export async function translate(ctx: SceneCtx) {
     text.lang = b.dataset.l!;
   }));
 
-  world.say('santa', 'Ah! Ein Teleskop für Mateo!', 2400);
-  await wait(500);
+  await wait(900);
   if (!ctx.isActive()) return;
+  world.say('santa', 'Ah! Ein Teleskop für Mateo!', 2400);
   await thinking(t, 'Prüfe Wunsch und Lager …', 900);
   if (!ctx.isActive()) return;
   agentMsg(t, `
     <p>Wunsch erkannt und automatisch abgeglichen:</p>
     <div class="card" style="display:flex;align-items:center;gap:10px">
       <span style="font-size:24px" aria-hidden="true">🔭</span>
-      <div style="flex:1"><b>${esc(MATEO.summary)}</b><div class="muted" style="font-size:13px">1 Stück reserviert</div></div>
+      <div style="flex:1"><b>${esc(MATEO.summary)}</b><div class="muted" style="font-size:13.5px">1 Stück reserviert</div></div>
       <span class="chip chip-green">auf Lager</span>
     </div>`);
 
@@ -102,10 +114,11 @@ export async function translate(ctx: SceneCtx) {
   if (!ctx.isActive()) return;
   mateo.pose = 'cheer';
   world.say('mateo', '¡Gracias! Danke!', 1800);
-  await world.giftToSleigh(icon('teleskop'));
+  world.emote('mateo', '♥', 1500);
+  await world.giftToSleigh(icon('teleskop'), world.phonePt());
   if (!ctx.isActive()) return;
   mateo.pose = 'stand';
   void world.walk('mateo', -16, 20);
-  await wait(500);
+  await wait(600);
   ctx.finish('translate');
 }

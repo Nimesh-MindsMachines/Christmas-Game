@@ -7,10 +7,13 @@ import { sfx, unlockAudio } from '../ui/sfx';
 import { MAIN_KIDS } from '../world/world';
 
 const CONNECTORS = [
-  { id: 'mail', ico: '✉️', name: 'E-Mail', desc: 'Santas Postfach am Nordpol' },
-  { id: 'db', ico: '🗄️', name: 'Werkstatt-Datenbank', desc: 'Lagerbestand aller Geschenke' },
-  { id: 'drive', ico: '📄', name: 'Google Drive', desc: 'Dokumente und Notizen' },
+  { id: 'mail', ico: '✉️', name: 'E-Mail', desc: 'Santas Postfach am Nordpol', on: `Verbunden · ${EMAILS.length} neue E-Mails` },
+  { id: 'db', ico: '🗄️', name: 'Werkstatt-Datenbank', desc: 'Lagerbestand aller Geschenke', on: 'Verbunden · 6 Artikelgruppen' },
+  { id: 'drive', ico: '📄', name: 'Google Drive', desc: 'Dokumente und Notizen', on: 'Verbunden · 1.204 Dateien' },
 ];
+
+/** Jeder Buchstabe bekommt eine eigene Verzögerung, damit der Titel einzeln hereinfällt. */
+export const letters = (s: string, off = 0) => [...s].map((ch, i) => `<span style="--i:${i + off}">${ch}</span>`).join('');
 
 export async function intro(ctx: SceneCtx) {
   const { world, root } = ctx;
@@ -20,7 +23,10 @@ export async function intro(ctx: SceneCtx) {
   const title = el(`
     <div class="title-screen">
       <div class="title-badge">MINDSMACHINES PRÄSENTIERT</div>
-      <h1 class="title-main">SANTAS<br>POSTFACH</h1>
+      <h1 class="title-main" aria-label="Santas Postfach">
+        <span class="tl" aria-hidden="true">${letters('SANTAS')}</span>
+        <span class="tl" aria-hidden="true">${letters('POSTFACH', 6)}</span>
+      </h1>
       <p class="title-sub">Ein Weihnachtsabenteuer mit OneMachine</p>
       <button class="press-start" type="button">▶ START</button>
       <p class="title-don">💚 ${esc(DONATION.line)}</p>
@@ -43,25 +49,31 @@ export async function intro(ctx: SceneCtx) {
   await ctx.talk(SPEAKERS.narrator(), '1. Dezember am Nordpol. Überall schreiben Kinder ihre Wunschzettel an den Weihnachtsmann …');
   if (!ctx.isActive()) return;
 
-  world.say('lena', 'Ab in den Briefkasten!', 2000);
+  void world.shot('village', 1500);
+  world.say('lena', 'Ab zum Briefkasten!', 2000);
   await Promise.all(MAIN_KIDS.map((id, i) => world.walk(id, 34 + i * 12, 26)));
   if (!ctx.isActive()) return;
+  MAIN_KIDS.forEach(id => (world.kid(id).facing = 1));
 
-  world.say('santa', 'Hohoho … was für ein Sturm!', 2200);
+  world.say('santa', 'Hohoho … was für ein Sturm!', 2400);
   await world.buryMailbox();
   if (!ctx.isActive()) return;
+  world.emote('ben', '!');
+  world.emote('paul', '!');
   await ctx.talk(SPEAKERS.narrator(), 'Doch dieses Jahr schneit es so heftig wie nie. Der Briefkasten ist komplett eingeschneit!');
   if (!ctx.isActive()) return;
 
   for (const [i, id] of MAIN_KIDS.entries()) {
-    setTimeout(() => { if (ctx.isActive()) void world.throwLetter(id); }, i * 260);
+    setTimeout(() => { if (ctx.isActive()) void world.throwLetter(id); }, i * 280);
   }
-  await wait(1300);
-  world.say('ben', 'Oh nein! Er geht nicht rein!', 2200);
-  world.say('emma', '?!', 1600);
-  await wait(1400);
+  await wait(1600);
+  if (!ctx.isActive()) return;
+  world.say('ben', 'Oh nein! Er geht nicht rein!', 2400);
+  world.emote('emma', '?');
+  await wait(1500);
   if (!ctx.isActive()) return;
 
+  world.hopKid('lena');
   await ctx.talk(SPEAKERS.kid('lena'), 'Kein Problem – dann schicken wir dem Weihnachtsmann eben eine E-Mail!');
   if (!ctx.isActive()) return;
 
@@ -72,38 +84,42 @@ export async function intro(ctx: SceneCtx) {
   const flights: Promise<void>[] = [];
   for (let i = 0; i < EMAILS.length; i++) {
     if (!ctx.isActive()) return;
-    const kidId = MAIN_KIDS[i % MAIN_KIDS.length];
-    const k = world.kid(kidId);
+    const k = world.kid(MAIN_KIDS[i % MAIN_KIDS.length]);
     const fromKid = EMAILS[i].child || i % 3 === 0;
-    const from = fromKid ? { x: k.x + 5, y: k.base - 12 } : { x: 330, y: 20 + (i * 17) % 60 };
+    const from = fromKid ? { x: k.x + 5, y: k.base - 12 } : { x: 335, y: 84 + ((i * 17) % 50) };
     flights.push(world.sendEmail(from).then(() => {
       if (!ctx.isActive()) return;
       notifs.unshift(`<b>${esc(EMAILS[i].from)}</b><span>${esc(EMAILS[i].subject)}</span>`);
       lockScreen(root, notifs);
     }));
-    await wait(170);
+    await wait(190);
   }
   await Promise.all(flights);
   if (!ctx.isActive()) return;
   MAIN_KIDS.forEach(id => (world.kid(id).pose = 'stand'));
   world.santa.sweat = true;
-  world.shake(300);
+  world.shake(350);
+  world.emote('santa', '!');
+  await wait(500);
   world.say('santa', `${EMAILS.length} E-Mails?!`, 2400);
   await wait(900);
+  if (!ctx.isActive()) return;
   await ctx.talk(SPEAKERS.santa(), 'Hohoho … so viele E-Mails! Und das Lager muss ich auch noch prüfen. Ich brauche Hilfe!');
   if (!ctx.isActive()) return;
 
   // ---------- OneMachine öffnen & Tools verbinden ----------
   sfx.power();
   world.flash();
+  world.ring(world.phonePt(), '#ffd34d', 28);
+  world.sparkle(world.phonePt());
   root.innerHTML = `
     <section class="home">
       <div class="app-bar" style="margin:-14px -16px 0">${OM_AVATAR}<span class="app-name">OneMachine</span></div>
-      <h2>Hallo, Weihnachts&shy;mann! Woran arbeiten wir heute?</h2>
+      <h2>Hallo, Weihnachtsmann! Woran arbeiten wir heute?</h2>
       <p class="lede" style="margin:0">Verbinde deine Tools. Alles, was Daten verändert, wartet auf deine Freigabe.</p>
       <div class="connectors">
         ${CONNECTORS.map(c => `
-          <div class="connector">
+          <div class="connector" data-id="${c.id}">
             <span class="ico" aria-hidden="true">${c.ico}</span>
             <span class="txt"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span></span>
             <button class="toggle" type="button" role="switch" aria-checked="false" aria-label="${esc(c.name)} verbinden" data-id="${c.id}"></button>
@@ -117,38 +133,64 @@ export async function intro(ctx: SceneCtx) {
 
   const toggles = [...root.querySelectorAll<HTMLButtonElement>('.toggle')];
   const start = root.querySelector<HTMLButtonElement>('#start')!;
+  const allOn = () => toggles.every(x => x.getAttribute('aria-checked') === 'true');
   const connect = (t: HTMLButtonElement) => {
     if (t.getAttribute('aria-checked') === 'true') return;
     t.setAttribute('aria-checked', 'true');
+    const def = CONNECTORS.find(c => c.id === t.dataset.id)!;
+    const row = t.closest('.connector')!;
+    row.classList.add('on');
+    row.querySelector('.txt span')!.textContent = def.on;
     sfx.coin();
-    const id = t.dataset.id;
-    if (id === 'mail') { world.say('santa', 'Postfach verbunden!', 1600, 'say-om'); }
-    if (id === 'db') { world.shelfOn = true; world.say('elf', 'Lager ist online!', 1800); world.sparkle({ x: 278, y: 90 }); }
-    if (id === 'drive') { world.cloud.visible = true; world.sparkle({ x: 72, y: 44 }, ['#ffffff', '#9fe0ff']); }
-    const all = toggles.every(x => x.getAttribute('aria-checked') === 'true');
-    start.textContent = all ? 'Los geht’s ▶' : 'Alle verbinden';
+    // Die Kamera zeigt, was gerade verbunden wurde
+    if (def.id === 'mail') {
+      void world.shot('village', 800);
+      world.ring(world.phonePt());
+      world.say('santa', 'Postfach verbunden!', 1800, 'say-om');
+    }
+    if (def.id === 'db') {
+      void world.shot('workshop', 800);
+      world.shelfOn = true;
+      world.elf.jump = 500;
+      world.say('elf', 'Lager ist online!', 1800);
+      world.sparkle({ x: 278, y: 96 });
+    }
+    if (def.id === 'drive') {
+      void world.shot('cloud', 800);
+      world.cloud.visible = true;
+      world.tag('cloud', 'cloud', 'DRIVE', 'tag-small');
+      world.sparkle(world.anchor('cloud')(), ['#ffffff', '#9fe0ff'], 18);
+    }
+    start.textContent = allOn() ? 'Los geht’s ▶' : 'Alle verbinden';
   };
   toggles.forEach(t => t.addEventListener('click', () => connect(t)));
+  let starting = false;
   start.addEventListener('click', async () => {
-    const missing = toggles.filter(t => t.getAttribute('aria-checked') !== 'true');
-    for (const t of missing) { connect(t); await wait(260); }
-    await wait(300);
+    if (starting) return;
+    starting = true;
+    for (const t of toggles.filter(x => x.getAttribute('aria-checked') !== 'true')) {
+      connect(t);
+      await wait(1000);
+      if (!ctx.isActive()) return;
+    }
+    await wait(400);
     world.santa.sweat = false;
+    world.hoho();
+    void world.shot('wide', 900);
     ctx.finish('connect');
   });
 }
 
 function lockScreen(root: HTMLElement, notifs: string[]) {
-  const date = 'Dienstag, 1. Dezember';
   const shown = notifs.slice(0, 5);
   root.innerHTML = `
     <section class="lock">
       <div class="lock-time">18:00</div>
-      <div class="lock-date">${date}</div>
+      <div class="lock-date">Dienstag, 1. Dezember</div>
       <div class="notifs">
         ${shown.map(n => `<div class="notif">${OM_AVATAR}${n}</div>`).join('')}
         ${notifs.length > shown.length ? `<div class="notif-more">+${notifs.length - shown.length} weitere E-Mails</div>` : ''}
       </div>
-      <div class="lock-hint">${notifs.length ? `📧 ${notifs.length} NEUE E-MAILS` : 'Santas Handy'}</div>
+      <div class="lock-hint">${notifs.length ? `📧 ${notifs.length} NEUE E-MAILS` : 'SANTAS HANDY'}</div>
     </section>`;
 }

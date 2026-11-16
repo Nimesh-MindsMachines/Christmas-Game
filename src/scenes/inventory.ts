@@ -8,6 +8,7 @@ import { dataUrl, giftBox, icon } from '../world/pixels';
 
 export async function inventory(ctx: SceneCtx) {
   const { world } = ctx;
+  void world.shot('workshop');
   const t = createThread(ctx.root, {
     eyebrow: 'Daten & Lager',
     title: 'Reicht der Vorrat?',
@@ -18,14 +19,18 @@ export async function inventory(ctx: SceneCtx) {
   await ask(t, 'gleiche alle Wünsche mit dem Lagerbestand ab', '@Lager-Agent');
   if (!ctx.isActive()) return;
   world.shelfOn = true;
-  world.tag('scan-shelf', 'shelf', 'SCANNE …', 'tag-om');
-  await thinking(t, 'Frage die Werkstatt-Datenbank ab …', 1300);
+  world.shelfScan = true;
+  world.ring(world.phonePt(), '#ffd34d', 22);
+  world.tag('scan-shelf', { x: 278, y: 122 }, 'SCANNE …', 'tag-om');
+  await thinking(t, 'Frage die Werkstatt-Datenbank ab …', 1500);
+  world.shelfScan = false;
   world.untag('scan-shelf');
   if (!ctx.isActive()) return;
 
   const short = STOCK.filter(s => s.requested > s.inStock);
   world.stockAlert = true;
   sfx.bonk();
+  world.emote('elf', '!');
   world.say('elf', `Bei ${short.length} Sachen wird’s knapp!`, 2600);
   agentMsg(t, `
     <p>Abgleich mit der <span class="cite">Werkstatt-Datenbank</span>: Bei <b>${short.length} Artikeln</b> fehlt Ware.</p>
@@ -47,7 +52,7 @@ export async function inventory(ctx: SceneCtx) {
     </div>
     <p>Die Nachbestellung liegt unter <b>„Braucht dich“</b> zur Freigabe bereit.</p>`);
 
-  await wait(600);
+  await wait(700);
   if (!ctx.isActive()) return;
 
   const order: Record<string, number> = {};
@@ -57,7 +62,7 @@ export async function inventory(ctx: SceneCtx) {
     <div class="approval">
       <div class="approval-head">${OM_AVATAR} BRAUCHT DICH <span class="badge">1</span></div>
       <div class="approval-body">
-        <p class="muted" style="font-size:14px;padding:8px 0 4px">Nachbestellung bei der Elfen-Manufaktur – Mengen kannst du anpassen.</p>
+        <p class="muted" style="font-size:14.5px;padding:8px 0 4px">Nachbestellung bei der Elfen-Manufaktur – Mengen kannst du anpassen.</p>
         ${short.map(s => `
           <div class="order-row" data-id="${s.id}">
             <span class="item"><img src="${dataUrl(icon(s.id), 2)}" alt="" /><span>${esc(s.name)}<small>Fehlen: ${fmt(s.requested - s.inStock)}</small></span></span>
@@ -77,12 +82,15 @@ export async function inventory(ctx: SceneCtx) {
   approval.querySelectorAll<HTMLElement>('.order-row').forEach(row => {
     const id = row.dataset.id!;
     const suggested = order[id];
-    const out = row.querySelector('output')!;
+    const out = row.querySelector<HTMLElement>('output')!;
     row.querySelectorAll<HTMLButtonElement>('.stepper button').forEach(b => {
       b.addEventListener('click', () => {
         sfx.select();
         order[id] = Math.max(0, order[id] + Number(b.dataset.d) * RESTOCK_STEP);
         out.textContent = String(order[id]);
+        out.classList.remove('bump');
+        void out.offsetWidth;
+        out.classList.add('bump');
         row.classList.toggle('changed', order[id] !== suggested);
       });
     });
@@ -104,17 +112,20 @@ export async function inventory(ctx: SceneCtx) {
     world.say('elf', 'Lieferung kommt!', 1800);
     await world.deliver(order);
     if (!ctx.isActive()) return;
+    ctx.award('shelf');
     world.elf.jump = 500;
-    world.say('elf', 'Lager voll! 🎉', 2000);
+    world.say('elf', 'Lager voll!', 2000);
+    world.emote('elf', '♥', 1600);
     for (let i = 0; i < 3; i++) { if (!ctx.isActive()) return; await world.giftToSleigh(giftBox(i + 1)); }
+    world.hoho();
   } else {
     sfx.back();
     ledger.restockApproved = false;
     world.stockAlert = false;
     world.say('elf', 'Okay, Chef. Deine Entscheidung.', 2400);
     agentMsg(t, '<p>In Ordnung, ich bestelle nichts. Die Engpässe merke ich mir für den Prüfbericht.</p>');
-    await wait(1200);
+    await wait(1400);
   }
-  await wait(600);
+  await wait(700);
   ctx.finish('inventory');
 }

@@ -14,6 +14,7 @@ const KEYS = {
 
 export async function drive(ctx: SceneCtx) {
   const { world } = ctx;
+  void world.shot('cloud', 1200);
   world.cloud.visible = true;
   world.cloud.doc = true;
   world.cloud.found = false;
@@ -28,31 +29,34 @@ export async function drive(ctx: SceneCtx) {
     intro: 'Alle Briefe sind da. Alle Geschenke auf Lager. Oder etwa doch nicht?',
   });
 
-  await wait(1800);
+  await wait(2000);
   if (!ctx.isActive()) return;
   world.say('jonas', 'Brrr …', 2000);
   await ctx.talk(SPEAKERS.narrator(), 'Jonas ist neu in der Nachbarschaft. Seinen Wunschzettel hat er geschrieben – aber nie abgeschickt.');
   if (!ctx.isActive()) return;
 
   world.fx.buzz = 600;
-  world.tag('cloud-alert', { x: 88, y: 32 }, '!', 'tag-om tag-big');
+  world.ring(world.phonePt(), '#ffd34d', 22);
+  world.emote('cloud', '!', 60000);
   agentMsg(t, `
     <div class="nudge">
       <span class="bell" aria-hidden="true">🔔</span>
       <div>
         <b>Mir ist etwas aufgefallen.</b>
-        <p style="font-size:14px;margin-top:4px;color:var(--ink-2)">In <span class="cite">Google Drive</span> liegt „${esc(JONAS_DOC.title)}“ von <b>${esc(JONAS_DOC.owner)}</b>. Es wurde nie an dich geschickt.</p>
+        <p style="font-size:14.5px;margin-top:4px;color:var(--ink-2)">In <span class="cite">Google Drive</span> liegt „${esc(JONAS_DOC.title)}“ von <b>${esc(JONAS_DOC.owner)}</b>. Es wurde nie an dich geschickt.</p>
       </div>
     </div>`);
 
   await dockButton(t, 'Dokument öffnen');
   if (!ctx.isActive()) return;
-  world.untag('cloud-alert');
+  world.clearBubbles();
   await world.scan();
   if (!ctx.isActive()) return;
   ledger.driveFound = true;
+  ctx.award('cloud');
   await world.docToPhone();
   if (!ctx.isActive()) return;
+  world.emote('santa', '!', 1400);
 
   const doc = el(`
     <div class="gdoc">
@@ -80,10 +84,10 @@ export async function drive(ctx: SceneCtx) {
     const v = KEYS[k];
     list.appendChild(el(`<div class="insight"><span class="sw" style="background:${v.color}"></span><span><b>${v.label}:</b> ${esc(v.text)} <span class="cite">${v.cite}</span></span></div>`));
     if (k === 'bedarf') world.say('jonas', 'Brrr … ist das kalt.', 1800);
-    await wait(500);
+    await wait(550);
   }
 
-  const fill = agentMsg(t, '<div class="card" style="font-size:16px;line-height:1.5">Santa weiß jetzt: Jonas’ Wunsch hatte <span class="blank"></span></div>');
+  const fill = agentMsg(t, '<div class="card" style="font-size:16.5px;line-height:1.5">Santa weiß jetzt: Jonas’ Wunsch hatte <span class="blank"></span></div>');
   await wait(400);
   await typeText(fill.querySelector<HTMLElement>('.blank')!, 'nie den Nordpol erreicht – und hinter dem Fußball steckt eine warme Winterjacke.', 22);
   if (!ctx.isActive()) return;

@@ -10,6 +10,7 @@ export const REC_ICON: Record<string, string> = { ball: 'ball', jacke: 'jacke', 
 
 export async function decision(ctx: SceneCtx) {
   const { world } = ctx;
+  void world.shot('mid');
   const jonas = world.kids.get('jonas') ?? world.addKid('jonas', 63);
   jonas.visible = true;
   jonas.shiver = true;
@@ -23,13 +24,15 @@ export async function decision(ctx: SceneCtx) {
   const found = ledger.driveFound;
   await wait(300);
   if (!ctx.isActive()) return;
+  world.fx.buzz = 500;
+  world.ring(world.phonePt(), '#ffd34d', 22);
 
   const card = agentMsg(t, `
-    ${found ? '' : '<p class="muted" style="font-size:14px">Hinweis: Das Drive-Dokument wurde übersprungen – die Vorschläge stützen sich auf weniger Informationen.</p>'}
+    ${found ? '' : '<p class="muted" style="font-size:14.5px">Hinweis: Das Drive-Dokument wurde übersprungen – die Vorschläge stützen sich auf weniger Informationen.</p>'}
     <div class="approval">
       <div class="approval-head">${OM_AVATAR} BRAUCHT DICH <span class="badge">${JONAS_RECS.length}</span></div>
       <div class="approval-body">
-        <p class="muted" style="font-size:14px;padding:10px 0 2px">Jonas, 9 · würde sich freuen über:</p>
+        <p class="muted" style="font-size:14.5px;padding:10px 0 2px">Jonas, 9 · würde sich freuen über:</p>
         ${JONAS_RECS.map(r => `
           <div class="rec" data-id="${r.id}">
             <span class="big"><img src="${dataUrl(icon(REC_ICON[r.id]), 4)}" alt="" /></span>
@@ -39,11 +42,11 @@ export async function decision(ctx: SceneCtx) {
               <div class="meta">
                 <span class="cite">${esc(r.source)}</span>
                 <span class="conf-bar" aria-hidden="true"><i style="width:${r.confidence}%"></i></span>
-                <span class="conf">${r.confidence}%</span>
+                <span class="conf">${r.confidence} % passend</span>
               </div>
               <div class="rec-actions" role="group" aria-label="${esc(r.name)}">
-                <button type="button" class="rej" aria-pressed="false">✕ Nein</button>
-                <button type="button" class="acc" aria-pressed="false">✓ Ja</button>
+                <button type="button" class="rej" aria-pressed="false">✕ Ablehnen</button>
+                <button type="button" class="acc" aria-pressed="false">✓ Annehmen</button>
               </div>
             </div>
           </div>`).join('')}
@@ -70,10 +73,17 @@ export async function decision(ctx: SceneCtx) {
       acc.setAttribute('aria-pressed', String(v === 'accept'));
       rej.setAttribute('aria-pressed', String(v === 'reject'));
       rec.classList.toggle('decided-reject', v === 'reject');
+      rec.classList.toggle('decided-accept', v === 'accept');
       if (v === 'accept') {
+        sfx.select();
         const img = icon(REC_ICON[id]);
         onSleigh.set(id, img);
-        void world.giftToSleigh(img, world.slotPt('pluesch'));
+        void world.giftToSleigh(img).then(() => {
+          if (!ctx.isActive()) return;
+          world.hopKid('jonas');
+          world.emote('jonas', '♥', 1100);
+          ctx.award('jonas');
+        });
       } else {
         sfx.back();
         const img = onSleigh.get(id);
@@ -82,6 +92,7 @@ export async function decision(ctx: SceneCtx) {
           onSleigh.delete(id);
           world.poof({ x: world.sleigh.x + 30, y: world.sleigh.y - 26 });
         }
+        ctx.award('jonas');
       }
       refresh();
     };
@@ -96,10 +107,11 @@ export async function decision(ctx: SceneCtx) {
   agentMsg(t, accepted.length
     ? `<p>Erledigt. ${accepted.length} ${accepted.length === 1 ? 'Geschenk liegt' : 'Geschenke liegen'} für Jonas auf dem Schlitten – genau wie du entschieden hast.</p>`
     : '<p>Verstanden, du hast alle Vorschläge abgelehnt. Ich ändere nichts ohne deine Freigabe.</p>');
+  if (accepted.length) world.hoho();
   world.say('santa', accepted.length ? 'Jonas wird staunen!' : 'Hmm, vielleicht nächstes Jahr …', 2400);
-  await wait(1600);
+  await wait(1700);
   if (!ctx.isActive()) return;
   void world.goHome('jonas');
-  await wait(600);
+  await wait(700);
   ctx.finish('decision');
 }

@@ -6,6 +6,7 @@ import { sfx } from '../ui/sfx';
 
 export async function audit(ctx: SceneCtx) {
   const { world } = ctx;
+  void world.shot('wide');
   const t = createThread(ctx.root, {
     eyebrow: 'Prüfbericht & Punkte',
     title: 'Die große Prüfung',
@@ -17,7 +18,7 @@ export async function audit(ctx: SceneCtx) {
 
   const ledgerEl = el(`
     <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span aria-hidden="true">📒</span><b style="font-size:14px">Geschenke-Ledger 2026.xlsx</b><span class="chip" style="margin-left:auto">Drive</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span aria-hidden="true">📒</span><b style="font-size:14.5px">Geschenke-Ledger 2026.xlsx</b><span class="chip" style="margin-left:auto">Drive</span></div>
       <div class="ledger"><div class="ledger-row"><span>Kind · Geschenk</span><span>Status</span></div></div>
     </div>`);
   t.list.appendChild(ledgerEl);
@@ -30,6 +31,7 @@ export async function audit(ctx: SceneCtx) {
 
   await ask(t, 'erstelle den Prüfbericht für Weihnachten', '@Prüf-Agent');
   if (!ctx.isActive()) return;
+  world.ring(world.phonePt(), '#ffd34d', 26);
   world.tag('audit-scan', 'santa', 'PRÜFE …', 'tag-om');
   await thinking(t, 'Prüfe Ledger, Bestellungen und Postfach …', 1400);
   world.untag('audit-scan');
@@ -48,7 +50,7 @@ export async function audit(ctx: SceneCtx) {
     <div class="card" style="padding:6px 12px">
       ${a.lines.map(l => `
         <div class="score-line">
-          <span>${esc(l.label)}</span><span class="pts">${l.points}/${l.max}</span>
+          <span>${esc(l.label)}</span><span class="pts">${l.points} / ${l.max}</span>
           <span class="src"><span class="cite">${esc(l.source)}</span></span>
         </div>`).join('')}
     </div>`);
@@ -59,29 +61,43 @@ export async function audit(ctx: SceneCtx) {
       <h2>PRÜFBERICHT</h2>
       ${a.lines.map(l => `<div class="sb-line"><span>${esc(l.label.toUpperCase())}</span><b>${l.points}</b></div>`).join('')}
       <div class="sb-total"><span>PUNKTE</span><b class="sb-num">0</b></div>
-      <div class="sb-stars">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= a.stars ? '' : 'off'}">★</span>`).join('')}</div>
+      <div class="sb-stars" aria-label="${a.stars} von 5 Sternen">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= a.stars ? '' : 'off'}">★</span>`).join('')}</div>
       <div class="sb-rank">${esc(a.title.toUpperCase())}</div>
     </div>`);
-  const stars = board.querySelector<HTMLElement>('.sb-stars')!;
-  const rank = board.querySelector<HTMLElement>('.sb-rank')!;
-  stars.style.visibility = 'hidden';
-  rank.style.visibility = 'hidden';
   world.ui.appendChild(board);
   const num = board.querySelector<HTMLElement>('.sb-num')!;
   let running = 0;
+  await wait(450);
   for (const [i, line] of [...board.querySelectorAll<HTMLElement>('.sb-line')].entries()) {
     if (!ctx.isActive()) { board.remove(); return; }
     line.classList.add('on');
+    // Zahl zählt Zeile für Zeile hoch
+    const from = running;
     running += a.lines[i].points;
-    num.textContent = String(running);
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / 300);
+      num.textContent = String(Math.round(from + (running - from) * p));
+      if (p < 1 && num.isConnected) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    setTimeout(() => { num.textContent = String(running); }, 340);
     a.lines[i].points > 0 ? sfx.coin() : sfx.back();
-    await wait(420);
+    await wait(430);
+  }
+  for (const star of board.querySelectorAll<HTMLElement>('.sb-stars span')) {
+    if (!ctx.isActive()) { board.remove(); return; }
+    star.classList.add('on');
+    if (!star.classList.contains('off')) sfx.coin();
+    await wait(170);
   }
   if (!ctx.isActive()) { board.remove(); return; }
-  stars.style.visibility = 'visible';
-  rank.style.visibility = 'visible';
+  board.querySelector('.sb-rank')!.classList.add('on');
   sfx.fanfare();
-  world.sparkle({ x: 160, y: 100 }, ['#ffd34d', '#e0651a', '#ffffff'], 30);
+  world.hoho();
+  world.sparkle({ x: 160, y: 100 }, ['#ffd34d', '#e0651a', '#ffffff'], 36);
+  world.sparkle({ x: 70, y: 70 }, ['#ffd34d', '#4dff88', '#ffffff'], 18);
+  world.sparkle({ x: 250, y: 70 }, ['#ffd34d', '#4db8ff', '#ffffff'], 18);
 
   agentMsg(t, `<p>Damit hast du <b>${a.gifts} Geschenke</b> für den Spendenkorb verdient. 🎁</p>`);
   await dockButton(t, 'Zum Spendenkorb ▶', 'btn-accent');

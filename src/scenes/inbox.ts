@@ -10,6 +10,7 @@ const CATS: Category[] = ['wunsch', 'dringend', 'verwaltung', 'spam'];
 
 export async function inbox(ctx: SceneCtx) {
   const { world } = ctx;
+  void world.shot('village');
   world.santa.sweat = true;
   world.say('santa', 'Wo fange ich nur an?', 2400);
 
@@ -38,6 +39,7 @@ export async function inbox(ctx: SceneCtx) {
   if (!ctx.isActive()) return;
   box.remove();
   world.santa.sweat = false;
+  world.ring(world.phonePt(), '#ffd34d', 22);
   world.say('santa', 'OneMachine, übernimm!', 1600, 'say-om');
   await thinking(t, `Lese ${EMAILS.length} E-Mails …`, 1200);
   if (!ctx.isActive()) return;
@@ -56,23 +58,30 @@ export async function inbox(ctx: SceneCtx) {
         </div>`).join('')}
     </div>`);
 
+  const addToBucket = (cat: Category, label: string, byUser = false) => {
+    const b = msg.querySelector(`.bucket[data-cat="${cat}"]`)!;
+    b.querySelector('.bucket-items')!.appendChild(el(`<div class="bucket-item"><span class="s">${esc(label)}</span>${byUser ? '<span class="chip">von dir</span>' : ''}</div>`));
+    const count = b.querySelector<HTMLElement>('.count')!;
+    count.textContent = String(Number(count.textContent) + 1);
+    count.classList.remove('bump');
+    void count.offsetWidth;
+    count.classList.add('bump');
+  };
+
   for (const e of sure) {
     if (!ctx.isActive()) return;
     ledger.sorted[e.id] = e.category;
-    void world.sortOne(e.category);
-    const b = msg.querySelector(`.bucket[data-cat="${e.category}"]`)!;
-    b.querySelector('.bucket-items')!.appendChild(el(`<div class="bucket-item"><span class="s">${esc(e.summary ?? `${e.from}: ${e.subject}`)}</span></div>`));
-    const count = b.querySelector('.count')!;
-    count.textContent = String(Number(count.textContent) + 1);
-    await wait(170);
+    void world.sortOne(e.category).then(() => ctx.award(world.sackPt(e.category)));
+    addToBucket(e.category, e.summary ?? `${e.from}: ${e.subject}`);
+    await wait(180);
   }
-  await wait(500);
+  await wait(600);
   if (!ctx.isActive()) return;
 
   // Die unsicheren Briefe schweben über Santa
   world.pile = 0;
   world.unsure = unsure.length;
-  world.say('santa', 'Und diese drei?', 2200);
+  world.emote('santa', '?', 2200);
   const q = agentMsg(t, `
     <p>Bei <b>${unsure.length} E-Mails</b> bin ich mir nicht sicher. Mein Tipp ist markiert – <b>du entscheidest</b>.</p>
     ${unsure.map(e => `
@@ -110,26 +119,26 @@ export async function inbox(ctx: SceneCtx) {
   for (const [i, e] of unsure.entries()) {
     const c = choices[e.id];
     ledger.sorted[e.id] = c;
-    void world.resolveUnsure(unsure.length - 1 - i, c);
-    const b = msg.querySelector(`.bucket[data-cat="${c}"]`)!;
-    b.querySelector('.bucket-items')!.appendChild(el(`<div class="bucket-item"><span class="s">${esc(c === 'wunsch' && e.summary ? e.summary : `${e.from}: ${e.subject}`)}</span><span class="chip">von dir</span></div>`));
-    const count = b.querySelector('.count')!;
-    count.textContent = String(Number(count.textContent) + 1);
-    await wait(250);
+    void world.resolveUnsure(unsure.length - 1 - i, c).then(() => ctx.award(world.sackPt(c)));
+    addToBucket(c, c === 'wunsch' && e.summary ? e.summary : `${e.from}: ${e.subject}`, true);
+    await wait(280);
   }
   q.remove();
   const wishes = Object.values(ledger.sorted).filter(c => c === 'wunsch').length;
   agentMsg(t, `<p>Postfach leer! <b>${wishes} Wunschzettel</b> sind bereit für den Lagerabgleich.</p>`);
-  await wait(700);
+  await wait(800);
   if (!ctx.isActive()) return;
 
   // Kinder jubeln und gehen nach Hause, der Wunschsack kommt auf den Schlitten
   MAIN_KIDS.forEach(id => { const k = world.kids.get(id); if (k) k.pose = 'cheer'; });
   world.say('lena', 'Juhu! Angekommen!', 1800);
-  await wait(1200);
+  world.emote('emma', '♥', 1600);
+  await wait(1400);
   if (!ctx.isActive()) return;
   MAIN_KIDS.forEach(id => { const k = world.kids.get(id); if (k) { k.pose = 'stand'; void world.goHome(id); } });
+  world.litter = [];
   await world.sackToSleigh();
-  await wait(500);
+  world.hoho();
+  await wait(600);
   ctx.finish('inbox');
 }

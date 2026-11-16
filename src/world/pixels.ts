@@ -30,6 +30,21 @@ export function sprite(rows: string[], pal: Record<string, string> = {}): HTMLCa
 }
 
 /** Einfarbige Silhouette eines Sprites (für Gegenlicht vor dem Mond). */
+const flipCache = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+/** Horizontal gespiegelte Kopie eines Sprites (gecacht). */
+export function flip(src: HTMLCanvasElement): HTMLCanvasElement {
+  const hit = flipCache.get(src);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height;
+  const g = c.getContext('2d')!;
+  g.translate(src.width, 0);
+  g.scale(-1, 1);
+  g.drawImage(src, 0, 0);
+  flipCache.set(src, c);
+  return c;
+}
+
 const silCache = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>();
 export function silhouette(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
   let m = silCache.get(src);
