@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07071a" />
+    <title>Santas Postfach · OneMachine</title>
+    <meta name="description" content="Ein Retro-Weihnachtsspiel mit OneMachine – für jeden Besuch spenden wir an die Suppenküche der Franziskaner in Düsseldorf." />
+    <link rel="icon" href="/brand/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="game">
+      <header id="hud">
+        <div class="hud-brand" aria-label="OneMachine"><span class="om-avatar">&gt;&gt;</span><span class="hud-title">OneMachine</span></div>
+        <ol id="progress" aria-label="Level"></ol>
+        <div class="hud-score" aria-label="Punkte"><span class="hud-star">★</span><span id="score">0000</span></div>
+        <button id="mute" class="hud-btn" type="button" aria-label="Ton aus">♪</button>
+        <button id="skip" class="hud-btn" type="button" hidden>SKIP ▸▸</button>
+      </header>
+      <div id="play">
+        <section id="stage-wrap">
+          <div id="stage">
+            <canvas id="world" aria-label="Spielwelt: Nordpol mit Santa, Kindern und Geschenkelager" role="img"></canvas>
+            <div id="stage-ui"></div>
+            <div id="dialog" class="dialog" hidden></div>
+          </div>
+        </section>
+        <aside id="phone" aria-label="Santas Handy mit OneMachine">
+          <div class="phone-shell">
+            <div class="phone-status"><span id="clock">18:00</span><span class="phone-cam" aria-hidden="true"></span><span class="phone-batt" aria-hidden="true">▮▮▮ ▰▰▱</span></div>
+            <div class="phone-screen">
+              <main id="scene" tabindex="-1"></main>
+              <div id="overlay"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

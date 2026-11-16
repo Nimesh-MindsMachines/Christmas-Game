@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#15152c" />
+    <title>Santas Postfach · OneMachine</title>
+    <meta name="description" content="Hilf dem Weihnachtsmann mit OneMachine – und wir spenden an die Suppenküche der Franziskaner in Düsseldorf." />
+    <link rel="icon" href="/brand/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="snow" aria-hidden="true"></canvas>
+    <div id="frame">
+      <header id="topbar" hidden>
+        <div class="brand" aria-label="OneMachine"></div>
+        <ol id="progress" aria-label="Fortschritt"></ol>
+        <button id="skip" class="link-btn" type="button">Überspringen</button>
+      </header>
+      <main id="scene" tabindex="-1"></main>
+      <div id="overlay"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
